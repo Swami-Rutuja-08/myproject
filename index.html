@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catch the Balloons!</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- Game Area -->
+    <div id="game-area">
+        <div class="grass"></div>
+        <div id="basket">🧺</div>
+        
+        <!-- Score and Timer -->
+        <div id="ui-layer">
+            <div class="stat-box">Score: <span id="score">0</span></div>
+            <div class="stat-box">Time: <span id="time">30</span>s</div>
+        </div>
+
+        <!-- Start Screen -->
+        <div id="start-screen" class="screen">
+            <h1>Catch the Balloons! 🎈</h1>
+            <p>Move the basket to catch the balloons!</p>
+            <button onclick="startGame()">Play Now</button>
+        </div>
+
+        <!-- Game Over Screen -->
+        <div id="game-over-screen" class="screen hidden">
+            <h1>Time's Up! ⏰</h1>
+            <p>You caught <span id="final-score">0</span> balloons!</p>
+            <button onclick="startGame()">Play Again</button>
+        </div>
+    </div>
+
+    <script>
+        // JAVASCRIPT: Game Logic
+
+        const basket = document.getElementById('basket');
+        const gameArea = document.getElementById('game-area');
+        const scoreDisplay = document.getElementById('score');
+        const timeDisplay = document.getElementById('time');
+        const startScreen = document.getElementById('start-screen');
+        const gameOverScreen = document.getElementById('game-over-screen');
+        const finalScoreDisplay = document.getElementById('final-score');
+
+        let score = 0;
+        let timeLeft = 30;
+        let gameInterval;
+        let spawnInterval;
+        let isPlaying = false;
+
+        // Colors for balloons
+        const balloonColors = ['🎈', '🎈', '🎈', '🎈', '🎈', '🎈', '🎈', '🎈'];
+
+        // 1. Move Basket with Mouse or Touch
+        function moveBasket(e) {
+            if (!isPlaying) return;
+            
+            let clientX;
+            if (e.type === 'touchmove') {
+                clientX = e.touches[0].clientX;
+            } else {
+                clientX = e.clientX;
+            }
+
+            // Keep basket within screen bounds
+            const basketWidth = basket.offsetWidth;
+            let newLeft = clientX - (basketWidth / 2);
+
+            if (newLeft < 0) newLeft = 0;
+            if (newLeft > window.innerWidth - basketWidth) newLeft = window.innerWidth - basketWidth;
+
+            basket.style.left = newLeft + 'px';
+            basket.style.top = 'auto'; // Ensure it stays at bottom
+        }
+
+        // Add event listeners for mouse and touch
+        document.addEventListener('mousemove', moveBasket);
+        document.addEventListener('touchmove', moveBasket, { passive: false });
+
+        // 2. Start Game
+        function startGame() {
+            score = 0;
+            timeLeft = 30;
+            isPlaying = true;
+            
+            scoreDisplay.innerText = score;
+            timeDisplay.innerText = timeLeft;
+            
+            startScreen.classList.add('hidden');
+            gameOverScreen.classList.add('hidden');
+
+            // Clear any existing balloons
+            const existingBalloons = document.querySelectorAll('.balloon');
+            existingBalloons.forEach(b => b.remove());
+
+            // Start Timer
+            gameInterval = setInterval(() => {
+                timeLeft--;
+                timeDisplay.innerText = timeLeft;
+                if (timeLeft <= 0) {
+                    endGame();
+                }
+            }, 1000);
+
+            // Start Spawning Balloons
+            spawnInterval = setInterval(spawnBalloon, 800);
+        }
+
+        // 3. Spawn Balloon
+        function spawnBalloon() {
+            if (!isPlaying) return;
+
+            const balloon = document.createElement('div');
+            balloon.classList.add('balloon');
+            balloon.innerText = '🎈';
+            
+            // Random horizontal position
+            const randomX = Math.random() * (window.innerWidth - 50);
+            balloon.style.left = randomX + 'px';
+            balloon.style.top = '-50px';
+            
+            gameArea.appendChild(balloon);
+
+            // Animate falling
+            let position = -50;
+            const fallSpeed = Math.random() * 3 + 2; // Random speed between 2 and 5
+
+            const fallInterval = setInterval(() => {
+                if (!isPlaying) {
+                    clearInterval(fallInterval);
+                    return;
+                }
+
+                position += fallSpeed;
+                balloon.style.top = position + 'px';
+
+                // Check Collision with Basket
+                const basketRect = basket.getBoundingClientRect();
+                const balloonRect = balloon.getBoundingClientRect();
+
+                // Simple collision detection
+                if (
+                    balloonRect.bottom >= basketRect.top + 20 &&
+                    balloonRect.top <= basketRect.bottom &&
+                    balloonRect.right >= basketRect.left &&
+                    balloonRect.left <= basketRect.right
+                ) {
+                    // Caught!
+                    score++;
+                    scoreDisplay.innerText = score;
+                    balloon.remove();
+                    clearInterval(fallInterval);
+                    
+                    // Visual pop effect
+                    balloon.style.transform = 'scale(1.5)';
+                } 
+                // Check if hit bottom (Missed)
+                else if (position > window.innerHeight) {
+                    balloon.remove();
+                    clearInterval(fallInterval);
+                }
+
+            }, 20);
+        }
+
+        // 4. End Game
+        function endGame() {
+            isPlaying = false;
+            clearInterval(gameInterval);
+            clearInterval(spawnInterval);
+            
+            finalScoreDisplay.innerText = score;
+            gameOverScreen.classList.remove('hidden');
+        }
+
+    </script>
+</body>
+</html>
